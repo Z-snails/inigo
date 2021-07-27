@@ -1,14 +1,13 @@
 include config.mk
 
 all : inigo
-.PHONY : bootstrap server inigo install static local-server deploy-init deploy test clean distclean
+.PHONY : bootstrap base server inigo install static local-server deploy-init deploy test clean distclean
 
 define build_base_dep
 	(cd Base/$(1) && idris2 --build Bootstrap.ipkg --build-dir ../../build)
 endef
 
-bootstrap :
-	mkdir -p build
+base :
 	$(call build_base_dep,Color)
 	$(call build_base_dep,Extra)
 	$(call build_base_dep,Fmt)
@@ -16,6 +15,8 @@ bootstrap :
 	$(call build_base_dep,Markdown)
 	$(call build_base_dep,SemVar)
 	$(call build_base_dep,Toml)
+
+bootstrap : base
 	$(MAKE) inigo
 
 server :
