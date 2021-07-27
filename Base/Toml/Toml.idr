@@ -13,22 +13,23 @@ export
 parseToml : String -> Maybe Toml
 parseToml x = parseTomlToks !(lexToml x)
 
+showKeyPart : String -> String
+showKeyPart k =
+    if includesAny ".=\"'" k
+    then quote k
+    else k
+
+export
+showKey : List String -> String
+showKey =
+    join "." . map showKeyPart
+
 ||| Encode a Toml document with raw keys
 export
 encode : Toml -> String
 encode =
   join "\n" . map showVal
   where
-    showKeyPart : String -> String
-    showKeyPart k =
-      if includesAny ".=\"'" k
-        then quote k
-        else k
-
-    showKey : List String -> String
-    showKey =
-      join "." . map showKeyPart
-
     showVal : (List String, Value) -> String
     showVal (key, ArrTab l) =
       let
