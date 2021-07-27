@@ -5,7 +5,7 @@ import Markdown.Parser
 
 import public Markdown.Data
 
-%default total
+-- %default total
 
 ||| Parse a Markdown string
 export
