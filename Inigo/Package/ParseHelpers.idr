@@ -23,18 +23,18 @@ string key toml =
       Left ("Missing or invalid key: " ++ (show key))
 
 export
+getStrings : List String -> Value -> Either String (List String)
+getStrings key (Lst vals) = foldlM fold [] vals
+  where
+    fold : List String -> Value -> Either String (List String)
+    fold acc (Str s) = Right $ s :: acc
+    fold acc val = Left $ "Invalid value type for " ++ showKey key
+getStrings key val = Left $ "Invalid value type for " ++ showKey key
+
+export
 listStr : List String -> Toml -> Either String (List String)
 listStr key toml =
   case get key toml of
-    Just (Lst l) =>
-      foldl (\acc, el =>
-        case (acc, el) of
-          (Right l, Str s) =>
-            Right (s :: l)
-          (Left err, _) =>
-            Left err
-          _ =>
-            Left ("Invalid value type for " ++ (show key))
-      ) (Right []) l
+    Just val => getStrings key val
     _ =>
       Left ("Missing or invalid key: " ++ (show key))
