@@ -16,7 +16,6 @@ version=\"0.0.1\"
 description=\"\"
 link=\"\"
 readme=\"\"
-modules=[\"%s\"]
 depends=[]
 license=\"\"
 main=\"%s\"
@@ -26,4 +25,4 @@ executable=\"%s\"
 
 [dev-deps]
 Base.IdrTest=\"~0.0.1\"
-""" packageNS packageName packageName packageName packageName
+""" packageNS packageName packageName packageName
