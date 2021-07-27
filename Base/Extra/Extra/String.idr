@@ -10,7 +10,7 @@ import Extra.Op
 public export
 join : String -> List String -> String
 join joiner strs =
-  foldl (++) "" (Data.List.intersperse joiner strs)
+  fastConcat $ intersperse joiner strs
 
 export
 findAll : String -> String -> List Nat
