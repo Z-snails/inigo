@@ -53,7 +53,7 @@ collect includeDevDeps depTree =
 -- We're going to grab all sub-dep trees via our new deps endpoint
 -- and then we're going to cull dups and then pass it to semvar sat to try
 -- and return us what deps we should fetch!
-fetchDeps : Server -> Bool -> Bool -> Package -> Promise (List (String, Package))
+fetchDeps : Server -> Bool -> Bool -> Package -> Promise (List (String, (pkg ** ModulesFor pkg)))
 fetchDeps server includeDevDeps build pkg =
   do
     -- We have a list of deps, so we basically just need to `pull` each
@@ -77,7 +77,7 @@ fetchDeps server includeDevDeps build pkg =
     --   then buildDeps
     --   else pure ()
   where
-    pullDep : (List String, Version) -> Promise (String, Package)
+    pullDep : (List String, Version) -> Promise (String, (pkg ** ModulesFor pkg))
     pullDep (pkg, version) =
       case splitDep pkg of
         Nothing =>
@@ -88,7 +88,8 @@ fetchDeps server includeDevDeps build pkg =
             pull server packageNS packageName (Just version)
             let src = inigoDepDir </> joinPath pkg
             pkg <- readPackage $ src </> inigoTomlPath
-            pure (src, pkg)
+            mods <- getModulesFor src pkg
+            pure (src, (pkg ** mods))
 
 
 ||| Get all elems of the left list not present in the right list
@@ -97,30 +98,37 @@ difference : Eq a => List a -> List a -> List a
 difference xs [] = xs
 difference xs (y :: ys) = difference (delete y xs) ys
 
-fetchExtraDeps : Bool -> Bool -> Package -> Promise (List (String, Package))
+fetchExtraDeps : Bool -> Bool -> Package -> Promise (List (String, (pkg ** ModulesFor pkg)))
 fetchExtraDeps devDeps build pkg = do
     deps <- fetchDeps [] pkg.extraDeps
     foldlM getExtraDepPkg [] deps
   where
-    getSubDirPkg : String -> List (String, Package) -> String -> Promise (List (String, Package))
+    getSubDirPkg :
+        (depDir : String) ->
+        List (String, (pkg ** ModulesFor pkg)) ->
+        (subDir : String) ->
+        Promise (List (String, (pkg ** ModulesFor pkg)))
     getSubDirPkg depDir pkgs subDir = do
         let srcDir = depDir </> subDir
         pkg <- readPackage $ srcDir </> inigoTomlPath
-        if any ((== pkg) . snd) pkgs
+        mods <- getModulesFor srcDir pkg
+        if any ((== pkg) . DPair.fst . snd) pkgs
             then pure pkgs
-            else pure ((srcDir, pkg) :: pkgs)
+            else pure ((srcDir, (pkg ** mods)) :: pkgs)
 
-    getExtraDepPkg : List (String, Package) -> ExtraDep -> Promise (List (String, Package))
+    getExtraDepPkg : List (String, (pkg ** ModulesFor pkg)) -> ExtraDep -> Promise (List (String, (pkg ** ModulesFor pkg)))
     getExtraDepPkg pkgs dep@(MkExtraDep _ _ _ subDirs) =
         foldlM (getSubDirPkg $ getExtraDepDir dep) pkgs subDirs
 
     genIPkg : String -> String -> Promise Package
     genIPkg dest subDir = do
-        let buildDir = joinPath (".." <$ splitPath (dest </> subDir)) </> "build"
-        let toml = dest </> subDir </> inigoTomlPath
-        let iPkgFile = dest </> subDir </> inigoIPkgPath
+        let fullPath = dest </> subDir
+        let buildDir = joinPath (".." <$ splitPath fullPath) </> "build"
+        let toml = fullPath </> inigoTomlPath
+        let iPkgFile = fullPath </> inigoIPkgPath
         pkg <- readPackage toml
-        fs_writeFile iPkgFile $ generateIPkg (Just buildDir) pkg
+        mods <- getModulesFor fullPath pkg
+        fs_writeFile iPkgFile $ generateIPkg (Just buildDir) pkg mods
         pure pkg
 
     fetchExtraDep : ExtraDep -> Promise (List Package)

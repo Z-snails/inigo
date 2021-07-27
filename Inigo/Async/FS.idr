@@ -80,18 +80,13 @@ fs_exists path =
 
 export
 fs_getFilesR : String -> Promise (List String)
-fs_getFilesR path =
-  doGetFilesR path
-  where
-  doGetFilesR : String -> Promise (List String)
-  doGetFilesR path =
-    do
-      isDir <- fs_isDir path
-      if isDir
+fs_getFilesR path = do
+    isDir <- fs_isDir path
+    if isDir
         then do
-          entries <- fs_getFiles path
-          let fullEntries = map (path </>) entries
-          allFiles <- all (map doGetFilesR fullEntries)
-          pure (concat allFiles)
+            entries <- fs_getFiles path
+            let fullEntries = map (path </>) entries
+            allFiles <- all (map fs_getFilesR fullEntries)
+            pure (foldr (++) [] allFiles)
         else
-          pure [path]
+            pure [path]

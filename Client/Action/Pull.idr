@@ -9,9 +9,11 @@ import Inigo.Async.Archive
 import Inigo.Async.Base
 import Inigo.Async.Fetch
 import Inigo.Async.FS
+import Inigo.Async.Package
 import Inigo.Async.Promise
 import Inigo.Package.Package
 import Inigo.Util.Url.Url
+import Inigo.Paths
 import System.Path
 import SemVar
 
@@ -44,8 +46,9 @@ pull server packageNS packageName maybeVersion =
   do
     pkg <- getPackage server packageNS packageName maybeVersion
     archive <- getArchive server pkg
-    let depPath = Archive.Path.depPath pkg
+    let depPath = Path.depPath pkg
+    mods <- getModulesFor depPath pkg
     extractArchive archive depPath
-    let iPkgFile = depPath </> "Inigo.ipkg"
+    let iPkgFile = depPath </> inigoIPkgPath
     log (fmt "Writing %s..." iPkgFile)
-    fs_writeFile iPkgFile (Package.Package.generateIPkg (Just "../../../../build") pkg)
+    fs_writeFile iPkgFile (generateIPkg (Just "../../../../build") pkg mods)

@@ -11,30 +11,30 @@ import Language.JSON
 import SemVar
 
 export
-writeDepCache : List (String, Package) -> Promise ()
+writeDepCache : List (String, (pkg ** ModulesFor pkg)) -> Promise ()
 writeDepCache pkgWithSrcs = do
     fs_mkdir True inigoDepDir
     fs_writeFile inigoDepPkgCache json
   where
-    encodeWithSrc : (String, Package) -> JSON
-    encodeWithSrc (src, pkg) = JObject
+    encodeWithSrc : (String, (pkg ** ModulesFor pkg)) -> JSON
+    encodeWithSrc (src, (pkg ** mods)) = JObject
         [ ("src", JString src)
-        , ("package", encodePackage pkg)
+        , ("package", encodePackage pkg mods)
         ]
     json : String
     json = show $ JArray $ encodeWithSrc <$> pkgWithSrcs
 
 export
-readDepCache : Promise (List (String, Package))
+readDepCache : Promise (List (String, (pkg ** ModulesFor pkg)))
 readDepCache = do
     inp <- fs_readFile inigoDepPkgCache
     let Just (JArray json) = parse inp
         | _ => reject "Corrupt dependency cache (\{inigoDepPkgCache}) (not an array)"
-    let Just pkgWithSrc = the (Maybe (List (String, Package))) $ traverse decodeWithSrc json
+    let Just pkgWithSrc = the _ $ traverse decodeWithSrc json
         | _ => reject "Corrupt dependency cache (\{inigoDepPkgCache}) (couldn't parse packages)"
     pure pkgWithSrc
   where
-    decodeWithSrc : JSON -> Maybe (String, Package)
+    decodeWithSrc : JSON -> Maybe (String, (pkg ** ModulesFor pkg))
     decodeWithSrc (JObject kvs) = do
         JString src <- lookup "src" kvs
             | _ => Nothing

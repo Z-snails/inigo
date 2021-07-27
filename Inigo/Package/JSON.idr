@@ -24,15 +24,15 @@ nullable : Lazy (a -> JSON) -> Maybe a -> JSON
 nullable = maybe JNull
 
 export
-encodePackage : Package -> JSON
-encodePackage pkg = JObject
+encodePackage : (pkg : Package) -> ModulesFor pkg -> JSON
+encodePackage pkg mods = JObject
     [ ("ns", JString pkg.ns)
     , ("package", JString pkg.package)
     , ("version", JString (show pkg.version))
     , ("description", nullable JString pkg.description)
     , ("link", nullable JString pkg.link)
     , ("readme", nullable JString pkg.readme)
-    , ("modules", JArray (JString <$> pkg.modules))
+    , ("modules", JArray (JString <$> mods.modules))
     , ("depends", JArray (JString <$> pkg.depends))
     , ("license", nullable JString pkg.license)
     , ("sourcedir", JString pkg.sourcedir)
@@ -50,8 +50,8 @@ encodePackage pkg = JObject
         ]
 
 export
-encodeAsJSON : Package -> String
-encodeAsJSON = show . JSON.encodePackage
+encodeAsJSON : (pkg : Package) -> ModulesFor pkg -> String
+encodeAsJSON pkg mods = show $ encodePackage pkg mods
 
 namespace Parse
 
@@ -90,7 +90,7 @@ namespace Parse
             _ => Nothing
 
     export
-    parsePackage : JSON -> Maybe Package
+    parsePackage : JSON -> Maybe (pkg ** ModulesFor pkg)
     parsePackage json = do
         ns <- stringKey "ns" json
         package <- stringKey "package" json
@@ -107,11 +107,12 @@ namespace Parse
         deps <- arrayKey "deps" json >>= traverse parseDep
         devDeps <- arrayKey "dev-deps" json >>= traverse parseDep
         extraDeps <- arrayKey "extra-deps" json >>= traverse parseExtraDep
-        Just $ MkPackage
+        pure (MkPackage
             { ns, package, version, description, link, readme
-            , modules, depends, license, sourcedir
+            , modFilter = None, depends, license, sourcedir
             , main, executable, deps, devDeps, extraDeps
             }
+            ** MkModules modules)
       where
         parseDep : JSON -> Maybe (List String, Requirement)
         parseDep json = do
@@ -120,5 +121,5 @@ namespace Parse
             Just (ns, var)
 
 export
-decodeJSON : String -> Maybe Package
+decodeJSON : String -> Maybe (pkg ** ModulesFor pkg)
 decodeJSON = parse >=> parsePackage

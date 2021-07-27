@@ -23,5 +23,9 @@ inigoDepPkgCache : String
 inigoDepPkgCache = inigoWorkDir </> "deps.cache"
 
 export
+rootDir : String
+rootDir = "."
+
+export
 DEBUG : Bool
 DEBUG = True

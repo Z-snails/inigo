@@ -8,11 +8,13 @@ import Extra.String
 import Fmt
 import public Inigo.Package.ExtraDep
 import Inigo.Package.ParseHelpers
+import public Inigo.Package.Modules
 import Inigo.Paths
 import Inigo.PkgTree
 import SemVar
 import System.Path
 import Toml
+
 
 public export
 record Package where
@@ -23,7 +25,8 @@ record Package where
   description : Maybe String
   link : Maybe String
   readme : Maybe String
-  modules : List String
+--   modules : List String -- deprecated
+  modFilter : ModFilter
   depends : List String
   license : Maybe String
   sourcedir : String
@@ -32,6 +35,11 @@ record Package where
   deps : List (List String, Requirement)
   devDeps : List (List String, Requirement)
   extraDeps : List ExtraDep
+
+public export
+record ModulesFor (pkg : Package) where
+    constructor MkModules
+    modules : List String
 
 public export
 Show Package where
@@ -44,7 +52,7 @@ Show Package where
         ", description=", (show $ description pkg),
         ", link=", (show $ link pkg),
         ", readme=", (limit 50 $ show $ readme pkg),
-        ", modules=", (show $ modules pkg),
+        ", mod-filter=", (show $ modFilter pkg),
         ", depends=", (show $ depends pkg),
         ", license=", (show $ license pkg),
         ", sourcedir=", (show $ sourcedir pkg),
@@ -57,10 +65,10 @@ Show Package where
 
 public export
 Eq Package where
-  (MkPackage ns0 package0 version0 description0 link0 readme0 modules0 depends0 license0 src0 main0 executable0 deps0 devDeps0 extraDeps0)
-    == (MkPackage ns1 package1 version1 description1 link1 readme1 modules1 depends1 license1 src1 main1 executable1 deps1 devDeps1 extraDeps1) =
+  (MkPackage ns0 package0 version0 description0 link0 readme0 modFilter0 depends0 license0 src0 main0 executable0 deps0 devDeps0 extraDeps0)
+    == (MkPackage ns1 package1 version1 description1 link1 readme1 modFilter1 depends1 license1 src1 main1 executable1 deps1 devDeps1 extraDeps1) =
       ns0 == ns1 && package0 == package1 && version0 == version1 && description0 == description1 && link0 == link1 && readme0 == readme1 &&
-      modules0 == modules1 && depends0 == depends1 && license0 == license1 && src0 == src1 && main0 == main1 && executable0 == executable1 &&
+      modFilter0 == modFilter1 && depends0 == depends1 && license0 == license1 && src0 == src1 && main0 == main1 && executable0 == executable1 &&
       deps0 == deps1 && devDeps0 == devDeps1 && extraDeps0 == extraDeps1
 
 export
@@ -92,7 +100,7 @@ parsePackage pkgToml =
     description <- maybe (string ["description"] toml)
     link <- maybe (string ["link"] toml)
     readme <- maybe (string ["readme"] toml)
-    modules <- listStr ["modules"] toml
+    modFilter <- parseModFilter toml
     depends <- listStr ["depends"] toml
     license <- maybe (string ["license"] toml)
     sourcedir <- withDefault "" (string ["sourcedir"] toml)
@@ -101,20 +109,26 @@ parsePackage pkgToml =
     deps <- parseDeps ["deps"] toml
     devDeps <- parseDeps ["dev-deps"] toml
     extraDeps <- parseExtraDeps toml
-    pure (MkPackage ns package version description link readme modules depends license sourcedir main executable deps devDeps extraDeps)
+    pure $ MkPackage
+        { ns, package, version, description
+        , link, readme, modFilter
+        , depends, license, sourcedir
+        , main, executable, deps, devDeps
+        , extraDeps
+        }
 
 -- TODO: Get deps better, e.g. pin instead of `&&`
 export
 toToml : Package -> Toml
 toToml pkg =
-  (mapMaybe id [
+  (catMaybes [
     Just (["ns"], Str (ns pkg)),
     Just (["package"], Str (package pkg)),
     Just (["version"], Str (show (version pkg))),
     map (\desc => (["description"], Str desc)) (description pkg),
     map (\link => (["link"], Str link)) (link pkg),
     map (\desc => (["readme"], Str desc)) (readme pkg),
-    Just (["modules"], Lst (map Str (modules pkg))),
+    toToml pkg.modFilter,
     Just (["depends"], Lst (map Str (depends pkg))),
     map (\license => (["license"], Str license)) (license pkg),
     Just (["sourcedir"], Str (sourcedir pkg)),
@@ -137,16 +151,17 @@ whenCons _ x = x
 
 -- ||| Generates an ipkg for compatibility with the native idris build system
 export
-generateIPkg : Maybe String -> Package -> String
-generateIPkg depBuildDir pkg =
+generateIPkg : Maybe String -> (pkg : Package) -> ModulesFor pkg -> String
+generateIPkg depBuildDir pkg mods =
   let
-    main = fromMaybe "" $ map ((++) "\nmain = ") (main pkg)
-    executable = fromMaybe "" $ map ((++) "\nexecutable = ") (executable pkg)
-    modules' = whenCons pkg.modules $ fmt "modules = %s " $ join ", " (modules pkg)
-    depends' = whenCons pkg.depends $ fmt "depends = %s " $ join ", " (depends pkg)
+    main = fromMaybe "" $ map ((++) "\nmain = ") pkg.main
+    executable = fromMaybe "" $ map ((++) "\nexecutable = ") pkg.executable
+    modules' = whenCons mods.modules $ fmt "modules = %s " $ join ", " mods.modules
+    depends' = whenCons pkg.depends $ fmt "depends = %s " $ join ", " pkg.depends
     buildDir = fromMaybe "build" depBuildDir
   in
     fmt """
+-- @generated by Inigo
 package %s
 
 %s
@@ -174,3 +189,7 @@ getDepsPackage dev pkg =
 export
 HasDeps Package String where
     getDeps = getDepsPackage
+
+export
+HasDeps (pkg ** ModulesFor pkg) String where
+    getDeps dev (pkg ** _) = getDeps dev pkg
