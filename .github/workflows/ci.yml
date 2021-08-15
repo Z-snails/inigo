@@ -51,9 +51,6 @@ jobs:
       - name: Checkout idrall repo
         run: |
           git submodule update --init idrall
-      - name: Build/Install Idrall
-        run: |
-          make idrall
 
       - name: Artifact Idris2 with API
         uses: actions/upload-artifact@v2
