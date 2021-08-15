@@ -48,10 +48,6 @@ jobs:
           make all && make install
           make install-api
 
-      - name: Checkout idrall repo
-        run: |
-          git submodule update --init idrall
-
       - name: Artifact Idris2 with API
         uses: actions/upload-artifact@v2
         with:
@@ -74,6 +70,9 @@ jobs:
           sudo apt-get install -y chezscheme
           echo "$HOME/.idris2/bin" >> $GITHUB_PATH
           chmod +x $HOME/.idris2/bin/idris2 $HOME/.idris2/bin/idris2_app/*
+      - name: Checkout idrall repo
+        run: |
+          git submodule update --init idrall
       - name: build
         run: |
           make bootstrap
