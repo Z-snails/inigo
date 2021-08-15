@@ -1,7 +1,7 @@
 include config.mk
 
 all : inigo
-.PHONY : bootstrap server inigo install static local-server deploy-init deploy test clean distclean
+.PHONY : bootstrap server idrall inigo install static local-server deploy-init deploy test clean distclean
 
 define build_base_dep
 	(cd Base/$(1) && idris2 --build Bootstrap.ipkg --build-dir ../../build)
@@ -20,6 +20,11 @@ bootstrap :
 
 server :
 	idris2 --build Server/InigoServer.ipkg --cg node
+
+idrall :
+	idris2 --build idrall/idrall.ipkg
+	mkdir -p depends/idrall-0
+	cp -r idrall/build/ttc/* depends/idrall-0/
 
 inigo :
 	idris2 --build Inigo.ipkg --cg node
