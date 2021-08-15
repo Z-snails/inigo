@@ -26,7 +26,7 @@ idrall :
 	mkdir -p depends/idrall-0
 	cp -r idrall/build/ttc/* depends/idrall-0/
 
-inigo :
+inigo : idrall
 	idris2 --build Inigo.ipkg --cg node
 	echo '#!/usr/bin/env node' | cat - build/exec/inigo > temp && mv temp build/exec/inigo
 	chmod +x build/exec/inigo
