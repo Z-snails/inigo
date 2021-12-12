@@ -173,7 +173,7 @@ getAction _ = Nothing
 
 getActionIO : IO (Maybe Action)
 getActionIO =
-  map (getAction . drop 2) getArgs
+  map (getAction . drop 1) getArgs
 
 runAction : Action -> IO ()
 -- runAction (Archive packageFile outFile) =
