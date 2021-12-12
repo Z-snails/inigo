@@ -14,17 +14,16 @@ import Inigo.Paths
 import Inigo.PkgTree
 import SemVar
 
-buildIPkg : String -> Promise ()
-buildIPkg path =
-  do
+buildIPkg : String -> Promise String ()
+buildIPkg path = do
     log (fmt "Compiling %s" (path </> inigoIPkgPath))
     debugLog "[\{path}]$ idris2 --build \{inigoIPkgPath}"
     0 <- system "idris2" ["--build", inigoIPkgPath] (Just path) False True
-        | errno => reject "idris2 build error: \{show errno}"
+        | errno => fail "idris2 build error: \{show errno}"
     log (fmt "Compiled %s" (path </> inigoIPkgPath))
 
 export
-buildDeps : Bool -> Promise ()
+buildDeps : Bool -> Promise String ()
 buildDeps dev = do
     pkgs <- readDepCache
     pkg <- currPackage

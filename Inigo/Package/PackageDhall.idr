@@ -97,12 +97,9 @@ Show PackageDhall where
     }
     """
 
-parsePackageDhall' : String -> IO $ Either String PackageDhall
-parsePackageDhall' path = do
-  Right package <- liftIOEither $ deriveFromDhallString {ty=PackageDhall} path
-    | Left err => do
-        pure $ Left $ show err
-  pure $ Right package
+parsePackageDhall' : String -> Promise String PackageDhall
+parsePackageDhall' path =
+    mapErr show $ Promise.liftIOEither $ IOEither.liftIOEither $ deriveFromDhallString {ty=PackageDhall} path
 
 inigoPackageFromDhall : PackageDhall -> Either String Package
 inigoPackageFromDhall (MkPackageDhall {depends, deps, description, devDeps, executable, license, link, main, modules, ns, package, readme, sourcedir, version, localDeps, gitDeps}) =
@@ -148,7 +145,9 @@ inigoPackageFromDhall (MkPackageDhall {depends, deps, description, devDeps, exec
       pure ([ns, name], !(requirementFromDhall requirement))
 
 export
-parsePackageDhall : String -> Promise $ Either String Package
+parsePackageDhall : String -> Promise String Package
 parsePackageDhall x = do
-  Right package <- liftIO $ parsePackageDhall' x | Left err => pure $ Left err
-  pure $ inigoPackageFromDhall package
+    package <- parsePackageDhall' x
+    case inigoPackageFromDhall package of
+        Right pkg => pure pkg
+        Left err => fail err

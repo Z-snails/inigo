@@ -15,10 +15,9 @@ execDir =
 
 -- TODO: Better handling of base paths
 export
-exec : CodeGen -> Bool -> List String -> Promise ()
-exec codeGen build userArgs =
-  do
-    pkg <- Client.Action.Build.writeIPkgFile
+exec : CodeGen -> Bool -> List String -> Promise String ()
+exec codeGen build userArgs = do
+    pkg <- writeIPkgFile
     when build $ runBuild codeGen
     let Just e = executable pkg
       | Nothing => reject "No executable set in Inigo config"

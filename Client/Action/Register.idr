@@ -3,7 +3,7 @@ module Client.Action.Register
 import Client.Util
 import Client.Server
 import Data.Buffer
-import Inigo.Async.Fetch
+-- import Inigo.Async.Fetch
 import Inigo.Async.Promise
 import Inigo.Util.Url.Url
 import Toml

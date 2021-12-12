@@ -11,8 +11,8 @@ import Extra.String
 import Fmt
 import Inigo.Account.Account
 import Inigo.Async.Base
-import Inigo.Async.CloudFlare.KV as KV
-import Inigo.Async.CloudFlare.Worker
+-- import Inigo.Async.CloudFlare.KV as KV
+-- import Inigo.Async.CloudFlare.Worker
 import Inigo.Async.Package
 import Inigo.Async.Promise
 import Inigo.Async.SubtleCrypto.SubtleCrypto
@@ -97,7 +97,7 @@ handleApiPackageIndex =
     pure (200, encodePackageIndex index, [])
 
 orLatestVersion : Maybe Version -> String -> String -> Promise (Maybe Version)
-orLatestVersion (Just v) = const $ const $ lift (Just v)
+orLatestVersion (Just v) = const $ const $ pure $ Just v
 orLatestVersion Nothing = latestVersion
 
 handlePackage : String -> String -> (Maybe Version) -> Promise Response

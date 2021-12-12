@@ -4,7 +4,7 @@ import Data.Buffer
 import Data.Maybe
 import Extra.Buffer
 import Inigo.Archive.Archive
-import Inigo.Async.Archive
+-- import Inigo.Async.Archive
 import Inigo.Async.Promise
 import Inigo.Package.Package
 import Inigo.Async.FS

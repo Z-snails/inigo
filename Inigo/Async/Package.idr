@@ -2,13 +2,15 @@ module Inigo.Async.Package
 
 import Inigo.Paths
 import Inigo.Async.Base
-import Inigo.Async.CloudFlare.KV
+-- import Inigo.Async.CloudFlare.KV
 import Inigo.Async.FS
 import Inigo.Async.Promise
 import Inigo.Package.Package
 import Inigo.Package.PackageDhall
 import Inigo.Package.PackageIndex
+import System.File
 
+{-
 ||| Gets a package from the "packages" KV
 export
 getPackage : String -> Promise (Either String Package)
@@ -20,6 +22,7 @@ export
 index : Promise (Either String PackageIndex)
 index =
   map parsePackageIndex (read "packages" "index")
+-}
 
 public export
 data InigoPackagePath
@@ -32,35 +35,33 @@ Show InigoPackagePath where
   show (DhallPath x) = x
 
 export
-packageFilePath : String -> Promise InigoPackagePath
+packageFilePath : String -> Promise String InigoPackagePath
 packageFilePath src =
   let tomlPath = src </> inigoTomlPath
       dhallPath = src </> inigoDhallPath
   in do
-    tp <- fs_exists tomlPath
-    dp <- fs_exists dhallPath
+    tp <- exists tomlPath
+    dp <- exists dhallPath
     case (tp, dp) of
          (True, False) => pure $ TomlPath tomlPath
          (False, True) => pure $ DhallPath dhallPath
-         (True, True) => reject "Conflict: both Inigo.toml and Inigo.dhall found"
-         (False, False) => reject "Inigo.toml or Inigo.dhall file not found"
+         (True, True) => fail "Conflict: both Inigo.toml and Inigo.dhall found"
+         (False, False) => fail "Inigo.toml or Inigo.dhall file not found"
 
-parseFile : InigoPackagePath -> Promise Package
+parseFile : InigoPackagePath -> Promise String Package
 parseFile (TomlPath path) = do
-  contents <- fs_readFile path
-  let Right package = parsePackage contents
-    | Left err => reject ("Error reading toml package: " ++ err)
-  pure package
-parseFile (DhallPath path) = do
-  -- can pass the file path to dhall so it can handle relative imports
-  Right package <- parsePackageDhall path
-    | Left err => reject ("Error reading dhall package: " ++ err)
-  pure package
+    contents <- mapErr show $ readFile path
+    let Right package = parsePackage contents
+        | Left err => fail $ "Error reading toml package: " ++ err
+    pure package
+parseFile (DhallPath path) =
+    -- can pass the file path to dhall so it can handle relative imports
+    mapErr ("Error reading dhall package: " ++) $ parsePackageDhall path
 
 export
-readPackage : String -> Promise Package
+readPackage : String -> Promise String Package
 readPackage dir = parseFile !(packageFilePath dir)
 
 export
-currPackage : Promise Package
+currPackage : Promise String Package
 currPackage = readPackage "." -- current dir

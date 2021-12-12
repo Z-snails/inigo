@@ -4,12 +4,16 @@ import Data.Maybe
 import Inigo.Async.Promise
 import Inigo.Async.Util
 import Inigo.Paths
+import System
 
+{-
 %foreign (promisifyPrim "()=>new Promise((resolve,reject)=>{})")
 never__prim : promise ()
 
+
 %foreign (promisifyPrim "(_,err)=>new Promise((resolve,reject)=>reject(err))")
 reject__prim : String -> promise a
+
 
 %foreign (promisifyResolve "null" "(text)=>console.log(text)")
 log__prim : String -> promise ()
@@ -19,41 +23,32 @@ system__prim : String -> List String -> String -> Int -> Int -> promise Int
 
 %foreign (promisifyPrim (toArray "(cmd,args,detached,verbose)=>new Promise((resolve,reject)=>{let opts={detached:detached===1, stdio: 'inherit'};require('child_process').spawn(cmd, toArray(args), opts).on('close', (code) => resolve(code))})"))
 systemWithStdIO__prim : String -> List String -> Int -> Int -> promise Int
+-}
 
 export
-never : Promise ()
-never =
-  promisify never__prim
+reject : err -> Promise err a
+reject = fail
 
 export
-reject : String -> Promise a
-reject err =
-  promisify (reject__prim err)
+log : String -> Promise a ()
+log text = liftIO $ putStrLn text
 
 export
-log : String -> Promise ()
-log text =
-  promisify (log__prim text)
-
-export
-debugLog : String -> Promise ()
+debugLog : String -> Promise a ()
 debugLog text = when DEBUG $ log text
 
 export
-system : String -> List String -> Maybe String -> Bool -> Bool -> Promise Int
-system cmd args cwd detached verbose =
-  promisify (system__prim cmd args (fromMaybe "" cwd) (boolToInt detached) (boolToInt verbose))
+system : String -> List String -> Maybe String -> Bool -> Bool -> Promise a Int
+system cmd args cwd detached verbose = liftIO $ system (cmd :: args)
 
 export
-systemWithStdIO : String -> List String -> Bool -> Bool -> Promise Int
-systemWithStdIO cmd args detached verbose =
-  promisify (systemWithStdIO__prim cmd args (boolToInt detached) (boolToInt verbose))
+systemWithStdIO : String -> List String -> Bool -> Bool -> Promise a Int
+systemWithStdIO cmd args detached verbose = system cmd args Nothing detached verbose -- TODO: fix this
 
 -- This is here and not in `Promise.idr` since it relies on `reject`
 export
-liftEither : Either String a -> Promise a
-liftEither x =
-  do
+liftEither : Either err a -> Promise err a
+liftEither x = do
     let Right res = x
-      | Left err => reject err
+        | Left err => reject err
     pure res

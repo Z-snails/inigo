@@ -9,9 +9,8 @@ import Inigo.Package.Package
 
 -- TODO: Consider moving this out from Inigo into toml config
 export
-test : CodeGen -> Promise ()
-test codeGen =
-  do
-    pkg <- Build.writeIPkgFile
+test : CodeGen -> Promise String ()
+test codeGen = do
+    pkg <- writeIPkgFile
     log (fmt "Running tests...")
     ignore $ system "idris2" ["--find-ipkg", "Test/Suite.idr", "--cg", CodeGen.toString codeGen, "-x", "suite"] Nothing True True

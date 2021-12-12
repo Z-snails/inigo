@@ -7,14 +7,15 @@ import Inigo.Package.CodeGen
 import Inigo.Package.Package
 import Inigo.Async.Package
 import Inigo.Paths
+import System.File
 
-writeIPkgNoExe : Promise ()
+writeIPkgNoExe : Promise String ()
 writeIPkgNoExe = do
     pkg <- currPackage
-    fs_writeFile inigoIPkgPath (generateIPkg False Nothing pkg)
+    mapErr show $ writeFile inigoIPkgPath (generateIPkg False Nothing pkg)
 
 export
-repl : Promise ()
+repl : Promise String ()
 repl = do
     writeIPkgNoExe
     ignore $ systemWithStdIO "idris2" ["--repl", inigoIPkgPath] True True

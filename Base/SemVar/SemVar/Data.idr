@@ -129,4 +129,3 @@ satisfy (GT v0) v1 = compare v1 v0 == GT
 satisfy (LTE v0) v1 = v1 `lte` v0
 satisfy (LT v0) v1 = compare v1 v0 == LT
 satisfy (EQ v0) v1 = compare v1 v0 == EQ
-satisfy _ _ = False

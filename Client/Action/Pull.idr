@@ -5,9 +5,9 @@ import Data.Buffer
 import Extra.Buffer
 import Fmt
 import Inigo.Archive.Path
-import Inigo.Async.Archive
+-- import Inigo.Async.Archive
 import Inigo.Async.Base
-import Inigo.Async.Fetch
+-- import Inigo.Async.Fetch
 import Inigo.Async.FS
 import Inigo.Async.Promise
 import Inigo.Package.Package

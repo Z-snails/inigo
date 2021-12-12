@@ -5,7 +5,10 @@ import Inigo.Async.Util
 import Data.Buffer
 import Extra.Buffer
 import System.Path
+import System.File
+import System.Directory
 
+{-
 %foreign (promisifyPrim "(path)=>require('fs').promises.readFile(path,'utf8')")
 fs_readFile__prim : String -> promise String
 
@@ -32,66 +35,59 @@ fs_isDir__prim : String -> promise Int
 
 %foreign (promisifyPrim "(path)=>require('fs').promises.access(path).then(()=>1).catch(()=>0)")
 fs_exists__prim : String -> promise Int
+-}
 
 export
-fs_readFile : String -> Promise String
-fs_readFile path =
-  promisify (fs_readFile__prim path)
+readFile : String -> Promise FileError String
+readFile path = liftIOEither $ readFile path
 
 export
-fs_writeFile : String -> String -> Promise ()
-fs_writeFile path contents =
-  promisify (fs_writeFile__prim path contents)
+writeFile : (oath : String) -> (content : String) -> Promise FileError ()
+writeFile path contents = liftIOEither $ writeFile path contents
 
 export
-fs_readFileBuf : String -> Promise Buffer
-fs_readFileBuf path =
-  promisify (fs_readFileBuf__prim path)
+readFileBuf : String -> Promise FileError Buffer
+readFileBuf path = liftIOEither $ createBufferFromFile path
 
 export
-fs_writeFileBuf : String -> Buffer -> Promise ()
-fs_writeFileBuf path contents =
-  promisify (fs_writeFileBuf__prim path contents)
+writeFileBuf : String -> Buffer -> Promise FileError ()
+writeFileBuf path contents = do
+    len <- rawSize contents
+    liftIOEither $ writeBufferToFile path contents len
 
 export
-fs_mkdir : Bool -> String -> Promise ()
-fs_mkdir recursive path =
-  promisify (fs_mkdir__prim path (boolToInt recursive))
+mkdir : Bool -> String -> Promise FileError ()
+mkdir recursive path = liftIOEither $ createDir path
 
 export
-fs_rmdir : Bool -> String -> Promise ()
-fs_rmdir recursive path =
-  promisify (fs_rmdir__prim path (boolToInt recursive))
+rmdir : Bool -> String -> Promise err ()
+rmdir recursive path = liftIO $ removeDir path
 
 export
-fs_getFiles : String -> Promise (List String)
-fs_getFiles path =
-  promisify (fs_getFiles__prim path)
+getFiles : String -> Promise FileError (List String)
+getFiles path = liftIOEither $ listDir path
+
+||| Check if a path is a directory, fails if the directory doesn't exist
+||| Use @ exists to check if it exists first.
+export
+isDir : String -> Promise FileError Bool
+isDir path = do
+    True <- exists path
+        | False => fail FileNotFound
+    Right dir <- openDir path
+        | Left (GenericFileError 20) => pure False
+        | Left err => fail err
+    closeDir dir
+    pure True
 
 export
-fs_isDir : String -> Promise Bool
-fs_isDir path =
-  intToBool <$> promisify (fs_isDir__prim path)
-
-export
-fs_exists : String -> Promise Bool
-fs_exists path =
-  intToBool <$> promisify (fs_exists__prim path)
-
-export
-fs_getFilesR : String -> Promise (List String)
-fs_getFilesR path =
-  doGetFilesR path
-  where
-  doGetFilesR : String -> Promise (List String)
-  doGetFilesR path =
-    do
-      isDir <- fs_isDir path
-      if isDir
+getFilesRec : String -> Promise FileError (List String)
+getFilesRec path = do
+    dir <- isDir path
+    if dir
         then do
-          entries <- fs_getFiles path
-          let fullEntries = map (path </>) entries
-          allFiles <- all (map doGetFilesR fullEntries)
-          pure (concat allFiles)
-        else
-          pure [path]
+            entries <- getFiles path
+            let fullEntries = map (path </>) entries
+            allFiles <- traverse getFilesRec fullEntries
+            pure $ concat allFiles
+        else pure [path]

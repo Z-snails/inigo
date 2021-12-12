@@ -5,7 +5,7 @@ import Client.Util
 import Data.Buffer
 import Extra.Buffer
 import Inigo.Async.Base
-import Inigo.Async.Fetch
+-- import Inigo.Async.Fetch
 import Inigo.Async.FS
 import Inigo.Async.Promise
 import Inigo.Util.Url.Url

@@ -54,7 +54,7 @@ def d f str = f str
 ||| Raise an Either to a promise of its right prong
 export
 expectResult : Show err => Either err a -> Promise a
-expectResult (Right x) = lift x
+expectResult (Right x) = pure x
 expectResult (Left err) = reject (show err)
 
 ||| Raise an Either to a promise of its right prong

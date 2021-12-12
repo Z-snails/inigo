@@ -8,25 +8,26 @@ import Inigo.Async.FS
 import Inigo.Async.Promise
 import Inigo.Template
 import System.Path
+import System.File
 
 export
 init :
     String -> -- template
     String -> -- package namespace
     String -> -- package name
-    Promise ()
+    Promise String ()
 init tmplFile packageNS packageName = do
-    tmplInp <- fs_readFile tmplFile
+    tmplInp <- mapErr show $ readFile tmplFile
     tmpl <- liftEither $ runTemplate packageNS packageName tmplFile tmplInp
     ignore $ all $ map writeTmplFile tmpl
     log (fmt "Successfully built %s" tmplFile)
   where
-    ensureParent : String -> Promise ()
+    ensureParent : String -> Promise String ()
     ensureParent path = case parent path of
-        Just parentPath => unless (parentPath == "") $ fs_mkdir True parentPath
+        Just parentPath => unless (parentPath == "") $ mapErr show $ mkdir True parentPath
         Nothing => pure ()
 
-    writeTmplFile : (String, String) -> Promise ()
+    writeTmplFile : (String, String) -> Promise String ()
     writeTmplFile (path, contents) = do
         ensureParent path
-        fs_writeFile path contents
+        mapErr show $ writeFile path contents

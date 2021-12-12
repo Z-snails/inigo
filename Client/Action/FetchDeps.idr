@@ -2,13 +2,13 @@ module Client.Action.FetchDeps
 
 import Client.Action.BuildDeps
 import Client.Action.CacheDeps
-import Client.Action.Pull
+-- import Client.Action.Pull
 import Client.Server
 import Data.List
 import Data.SortedSet as Set
 import Extra.String
 import Inigo.Async.Base
-import Inigo.Async.Fetch
+-- import Inigo.Async.Fetch
 import Inigo.Async.FS
 import Inigo.Async.Git
 import Inigo.Async.Package
@@ -19,16 +19,19 @@ import Inigo.Paths
 import Inigo.Util.Url.Url
 import SemVar
 import SemVar.Sat
+import System.File
 
-getPackageDepTree : Server -> String -> String -> Promise PackageDepTree
+{-
+getPackageDepTree : Server -> String -> String -> Promise String PackageDepTree
 getPackageDepTree server packageNS packageName =
   do
     let url = toString (fromHostPath (host server) (getPackageDepTreeUrl packageNS packageName))
     log ("Requesting " ++ url ++ "...")
     contents <- fetch url
-    Right packageDepTree <- lift (parsePackageDepTree contents)
-      | Left err => reject ("Invalid package dep tree: " ++ err)
+    let Right packageDepTree = parsePackageDepTree contents
+      | Left err => fail ("Invalid package dep tree: " ++ err)
     pure packageDepTree
+-}
 
 -- Responsible for pulling deps based on package conf
 
@@ -48,7 +51,7 @@ collect includeDevDeps depTree =
       (pkg, version, (deps pkgDep) ++ (if includeDevDeps then (dev pkgDep) else []))
     ) pkgDeps
   ) depTree
-
+{-
 -- Okay, here's where the fun begins
 -- We're going to grab all sub-dep trees via our new deps endpoint
 -- and then we're going to cull dups and then pass it to semvar sat to try
@@ -66,7 +69,7 @@ fetchDeps server includeDevDeps build pkg =
     depTree <- all $ map (uncurry $ getPackageDepTree server) splitDeps
     let versionNodes = collect includeDevDeps (concat depTree)
     log ("Package Dep Tree: " ++ (show versionNodes))
-    Right sat <- lift $ satisfyAll versionNodes allDeps
+    let Right sat = satisfyAll versionNodes allDeps
       | Left err => reject ("Error satisfying contraints: " ++ err)
     log ("Sat: " ++ (show sat))
 
@@ -89,6 +92,7 @@ fetchDeps server includeDevDeps build pkg =
             let src = inigoDepDir </> joinPath pkg
             pkg <- readPackage src
             pure (src, pkg)
+-}
 
 ||| Get all elems of the left list not present in the right list
 total
@@ -96,12 +100,12 @@ difference : Eq a => List a -> List a -> List a
 difference xs [] = xs
 difference xs (y :: ys) = difference (delete y xs) ys
 
-fetchExtraDeps : Bool -> Bool -> Package -> Promise (List (String, Package))
+fetchExtraDeps : Bool -> Bool -> Package -> Promise String (List (String, Package))
 fetchExtraDeps devDeps build pkg = do
     deps <- fetchDeps [] pkg.extraDeps
     foldlM getExtraDepPkg [] deps
   where
-    getSubDirPkg : String -> List (String, Package) -> String -> Promise (List (String, Package))
+    getSubDirPkg : String -> List (String, Package) -> String -> Promise String (List (String, Package))
     getSubDirPkg depDir pkgs subDir = do
         let srcDir = depDir </> subDir
         pkg <- readPackage srcDir
@@ -109,31 +113,31 @@ fetchExtraDeps devDeps build pkg = do
             then pure pkgs
             else pure ((srcDir, pkg) :: pkgs)
 
-    getExtraDepPkg : List (String, Package) -> ExtraDep -> Promise (List (String, Package))
+    getExtraDepPkg : List (String, Package) -> ExtraDep -> Promise String (List (String, Package))
     getExtraDepPkg pkgs dep@(MkExtraDep _ _ _ subDirs) =
         foldlM (getSubDirPkg $ getExtraDepDir dep) pkgs subDirs
 
-    genIPkg : String -> String -> Promise Package
+    genIPkg : String -> String -> Promise String Package
     genIPkg dest subDir = do
         let buildDir = joinPath (".." <$ splitPath (dest </> subDir)) </> "build"
         let pkgdir = dest </> subDir
         let iPkgFile = dest </> subDir </> inigoIPkgPath
         pkg <- readPackage pkgdir
-        fs_writeFile iPkgFile $ generateIPkg False (Just buildDir) pkg
+        mapErr show $ writeFile iPkgFile $ generateIPkg False (Just buildDir) pkg
         pure pkg
 
-    fetchExtraDep : ExtraDep -> Promise (List Package)
+    fetchExtraDep : ExtraDep -> Promise String (List Package)
     fetchExtraDep pkg@(MkExtraDep Git commit url subDirs) = do
         let dest = getExtraDepDir pkg
         log "Downloading package from \"\{url}\""
-        ignore $ git_downloadTo url (Just commit) dest
+        ignore $ mapErr show $ Git.downloadTo url (Just commit) dest
         traverse (genIPkg dest) subDirs
     fetchExtraDep pkg@(MkExtraDep SubDir _ url subDirs) = do
         let dest = getExtraDepDir pkg
         log "Checking packages in \"\{url}\""
         traverse (genIPkg dest) subDirs
 
-    fetchDeps : List ExtraDep -> List ExtraDep -> Promise (List ExtraDep) -- if this is too slow, use SortedSet
+    fetchDeps : List ExtraDep -> List ExtraDep -> Promise String (List ExtraDep) -- if this is too slow, use SortedSet
     fetchDeps done [] = pure done
     fetchDeps done (MkExtraDep _ _ _ [] :: todo) = fetchDeps done todo
     fetchDeps done (pkg@(MkExtraDep _ _ _ subDirs0) :: todo) = case find (eqIgnoreSubDirs pkg) done of
@@ -149,11 +153,12 @@ fetchExtraDeps devDeps build pkg = do
                 let todo' = foldl (\acc, pkg => pkg.extraDeps ++ acc) todo pkgs
                 let done' = MkExtraDep method info url (missing ++ subDirs0) :: filter (not . eqIgnoreSubDirs pkg) done
                 fetchDeps done' todo
+
 export
-fetchAllDeps : Server -> Bool -> Bool -> Promise ()
-fetchAllDeps server devDeps build = do
+fetchAllDeps : {- Server -> -} Bool -> Bool -> Promise String ()
+fetchAllDeps {- server -} devDeps build = do
     pkg <- currPackage
-    deps <- fetchDeps server devDeps build pkg
+    -- deps <- fetchDeps server devDeps build pkg
     extraDeps <- fetchExtraDeps devDeps build pkg
-    let allDeps = deps ++ extraDeps
-    writeDepCache allDeps
+    -- let allDeps = deps ++ extraDeps
+    mapErr show $ writeDepCache extraDeps

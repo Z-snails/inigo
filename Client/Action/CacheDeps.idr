@@ -9,12 +9,13 @@ import Inigo.Package.JSON
 import Inigo.Paths
 import Language.JSON
 import SemVar
+import System.File
 
 export
-writeDepCache : List (String, Package) -> Promise ()
+writeDepCache : List (String, Package) -> Promise FileError ()
 writeDepCache pkgWithSrcs = do
-    fs_mkdir True inigoDepDir
-    fs_writeFile inigoDepPkgCache json
+    mkdir True inigoDepDir
+    writeFile inigoDepPkgCache json
   where
     encodeWithSrc : (String, Package) -> JSON
     encodeWithSrc (src, pkg) = JObject
@@ -25,13 +26,13 @@ writeDepCache pkgWithSrcs = do
     json = show $ JArray $ encodeWithSrc <$> pkgWithSrcs
 
 export
-readDepCache : Promise (List (String, Package))
+readDepCache : Promise String (List (String, Package))
 readDepCache = do
-    inp <- fs_readFile inigoDepPkgCache
+    inp <- mapErr show $ readFile inigoDepPkgCache
     let Just (JArray json) = parse inp
-        | _ => reject "Corrupt dependency cache (\{inigoDepPkgCache}) (not an array)"
+        | _ => fail "Corrupt dependency cache (\{inigoDepPkgCache}) (not an array)"
     let Just pkgWithSrc = the (Maybe (List (String, Package))) $ traverse decodeWithSrc json
-        | _ => reject "Corrupt dependency cache (\{inigoDepPkgCache}) (couldn't parse packages)"
+        | _ => fail "Corrupt dependency cache (\{inigoDepPkgCache}) (couldn't parse packages)"
     pure pkgWithSrc
   where
     decodeWithSrc : JSON -> Maybe (String, Package)

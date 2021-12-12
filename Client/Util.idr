@@ -8,7 +8,7 @@ import Inigo.Async.Promise
 import System
 import System.File
 import System.Path
-
+{-
 rejectStatus : String -> Int -> Buffer -> Promise a
 rejectStatus url status buf =
   do
@@ -23,13 +23,12 @@ assertOk url result =
     (200, buf) <- result
       | (status, res) => rejectStatus url status res
     pure buf
-
+-}
 
 ||| TODO: Improve home dir
 export
 getHomeDir : IO (Maybe String)
-getHomeDir =
-  do
+getHomeDir = do
     Nothing <- getEnv "INIGO_HOME"
       | Just home => pure $ Just home
     Nothing <- getEnv "HOME"
@@ -38,8 +37,7 @@ getHomeDir =
 
 export
 inigoSessionFile : IO (Maybe String)
-inigoSessionFile =
-  do
+inigoSessionFile = do
     Nothing <- getEnv "INIGO_SESSION"
       | Just sessionFile => pure (Just sessionFile)
     Just homeDir <- getHomeDir
@@ -48,8 +46,7 @@ inigoSessionFile =
 
 export
 readSessionFile : IO (Maybe String)
-readSessionFile =
-  do
+readSessionFile = do
     Just sessionFile <- inigoSessionFile
       | Nothing => pure Nothing
     Right session <- readFile sessionFile
