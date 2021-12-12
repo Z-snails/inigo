@@ -34,6 +34,7 @@ inigo : idrall
 
 install : inigo
 	cp build/exec/inigo $(INSTALL_DIR)
+	cp -r build/exec/inigo_app $(INSTALL_DIR)/inigo_app
 	chmod +x $(INSTALL_DIR)/inigo
 
 static :

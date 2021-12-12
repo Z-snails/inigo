@@ -29,7 +29,7 @@ advance _ = nextChar
 
 data TempVar
     = Package
-    | Namespace
+    -- | Namespace
     | File String
 
 data TempPart : Type where
@@ -49,7 +49,7 @@ unknownVar = Left "Unknown variable"
 
 parseVar : List Char -> Maybe TempVar
 parseVar ['P', 'a', 'c', 'k', 'a', 'g', 'e'] = Just Package
-parseVar ['N', 'a', 'm', 'e', 's', 'p', 'a', 'c', 'e'] = Just Namespace
+-- parseVar ['N', 'a', 'm', 'e', 's', 'p', 'a', 'c', 'e'] = Just Namespace
 parseVar ('f' :: 'i' :: 'l' :: 'e' :: ' ' :: file) = Just $ File $ fastPack file
 parseVar _ = Nothing
 
@@ -102,11 +102,11 @@ seperateFiles [<] _ acc = Right acc
 seperateFiles (sx :< Var (File fp)) file acc = seperateFiles sx [] ((fp, cleanStart file) :: acc)
 seperateFiles (sx :< x) xs ys = seperateFiles sx (x :: xs) ys
 
-parameters (ns, pkg : String)
+parameters ({- ns, -} pkg : String)
 
     renderVar : TempVar -> Either String String
     renderVar Package = Right pkg
-    renderVar Namespace = Right ns
+    -- renderVar Namespace = Right ns
     renderVar (File x) = Left "Internal Error: Unexpected \\{file ...}"
 
     renderTemplate :

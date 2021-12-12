@@ -60,7 +60,7 @@ data Action : Type where
   FetchDeps : {- Server -> -} Bool -> Bool -> Action
   Init :
     String -> -- template file
-    String -> -- package ns
+    {- String -> -} -- package ns
     String -> -- package name
     Action
   -- Login : Server -> Action
@@ -166,8 +166,8 @@ getAction ["repl"] =
 --     server <- getServer serverName
 --     pure $ Login server
 
-getAction ["init", packageNS, packageName, tmplFile] =
-  Just (Init tmplFile packageNS packageName)
+getAction ["init", {- packageNS, -} packageName, tmplFile] =
+  Just (Init tmplFile {- packageNS -} packageName)
 
 getAction _ = Nothing
 
@@ -238,9 +238,9 @@ runAction Repl = run repl
 --     putStrLn "Logging in..."
 --     run (loginAccount server ns passphrase)
 
-runAction (Init tmplFile packageNS packageName) = do
-    putStrLn (fmt "Initializing new inigo application %s.%s from template %s" packageNS packageName tmplFile)
-    run (init tmplFile packageNS packageName)
+runAction (Init tmplFile {- packageNS -} packageName) = do
+    putStrLn (fmt "Initializing new inigo application %s from template %s" {- packageNS -} packageName tmplFile)
+    run (init tmplFile {- packageNS -} packageName)
 
 runAction (Test codeGen) =
   run (test codeGen)
@@ -254,7 +254,7 @@ short Check             = "check: Typecheck the project"
 short (Exec _ _)        = "exec <code-gen=node> -- ...args: Execute program with given args"
 -- short (Extract _ _)     = "extract <archive_file> <out_path>: Extract a given archive to directory"
 short (FetchDeps _ _) = "fetch-deps <server>: Fetch and build all deps (opts: --no-build, --dev)"
-short (Init _ _ _)      = "init <namespace> <package> <template.inigo>: Initialize a new project with given namespace and package name"
+short (Init _ _)      = "init <package> <template.inigo>: Initialize a new project with given namespace and package name"
 -- short (Login _)         = "login <server>: Login to an account"
 -- short (Pull _ _ _ _)    = "pull <server> <package_ns> <package_name> <version?>: Pull a package from remote"
 -- short (Push _ _)        = "push <server> <pkg_file>: Push a package to remote"
@@ -275,7 +275,7 @@ usage =
         , (Exec Node [])
         -- , (Extract "" "")
         , (FetchDeps {- Prod -} False False)
-        , (Init "" "" "")
+        , (Init "" "")
         -- , (Login Prod)
         -- , (Pull Prod "" "" Nothing)
         -- , (Push Prod "")

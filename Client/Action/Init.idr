@@ -13,12 +13,12 @@ import System.File
 export
 init :
     String -> -- template
-    String -> -- package namespace
+    -- String -> -- package namespace
     String -> -- package name
     Promise String ()
-init tmplFile packageNS packageName = do
+init tmplFile {- packageNS -} packageName = do
     tmplInp <- mapErr show $ readFile tmplFile
-    tmpl <- liftEither $ runTemplate packageNS packageName tmplFile tmplInp
+    tmpl <- liftEither $ runTemplate {- packageNS -} packageName tmplFile tmplInp
     ignore $ all $ map writeTmplFile tmpl
     log (fmt "Successfully built %s" tmplFile)
   where

@@ -1,6 +1,5 @@
 \{file Inigo.dhall}
-{ ns = "\{Namespace}"
-, package = "\{Package}"
+{ package = "\{Package}"
 , version = "0.0.1"
 , sourcedir = "."
 , description = None Text
@@ -22,4 +21,4 @@ module Main
 
 main : IO ()
 main = do
-    putStrLn "Hello from \{Namespace}.\{Package}"
+    putStrLn "Hello from \{Package}"
